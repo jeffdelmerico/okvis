@@ -4,7 +4,7 @@
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
- * 
+ *
  *   * Redistributions of source code must retain the above copyright notice,
  *     this list of conditions and the following disclaimer.
  *   * Redistributions in binary form must reproduce the above copyright notice,
@@ -79,6 +79,10 @@ bool VioInterface::addEigenImage(const okvis::Time & stamp, size_t cameraIndex,
 // Set the callback to be called every time a new state is estimated.
 void VioInterface::setStateCallback(const StateCallback & stateCallback) {
   stateCallback_ = stateCallback;
+}
+
+void VioInterface::setOdometryCallback(const OdometryCallback & odometryCallback) {
+  odometryCallback_ = odometryCallback;
 }
 
 // Set the fullStateCallback to be called every time a new state is estimated.

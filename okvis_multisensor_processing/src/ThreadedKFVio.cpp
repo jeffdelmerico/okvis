@@ -4,7 +4,7 @@
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
- * 
+ *
  *   * Redistributions of source code must retain the above copyright notice,
  *     this list of conditions and the following disclaimer.
  *   * Redistributions in binary form must reproduce the above copyright notice,
@@ -110,7 +110,7 @@ void ThreadedKFVio::init() {
           std::shared_ptr<threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::CameraMeasurement> > >
           (new threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::CameraMeasurement> >()));
   }
-  
+
   // set up windows so things don't crash on Mac OS
   if(parameters_.visualization.displayImages){
     for (size_t im = 0; im < parameters_.nCameraSystem.numCameras(); im++) {
@@ -119,7 +119,7 @@ void ThreadedKFVio::init() {
   	  cv::namedWindow(windowname.str());
     }
   }
-  
+
   startThreads();
 }
 
@@ -216,6 +216,37 @@ bool ThreadedKFVio::addImage(const okvis::Time & stamp, size_t cameraIndex,
   } else {
     frame->measurement.deliversKeypoints = false;
   }
+
+  if (blocking_) {
+    cameraMeasurementsReceived_[cameraIndex]->PushBlockingIfFull(frame, 1);
+    return true;
+  } else {
+    cameraMeasurementsReceived_[cameraIndex]->PushNonBlockingDroppingIfFull(
+        frame, max_camera_input_queue_size);
+    return cameraMeasurementsReceived_[cameraIndex]->Size() == 1;
+  }
+}
+
+bool ThreadedKFVio::addImageWithIndex(
+          const okvis::Time & stamp, size_t cameraIndex,
+          const cv::Mat & image, const int64_t & id) {
+  assert(cameraIndex<numCameras_);
+
+  if (lastAddedImageTimestamp_ > stamp
+      && fabs((lastAddedImageTimestamp_ - stamp).toSec())
+          > parameters_.sensors_information.frameTimestampTolerance) {
+    LOG(ERROR)
+        << "Received image from the past. Dropping the image.";
+    return false;
+  }
+  lastAddedImageTimestamp_ = stamp;
+  lastAddedFrameId_ = id;
+
+  std::shared_ptr<okvis::CameraMeasurement> frame = std::make_shared<
+      okvis::CameraMeasurement>();
+  frame->measurement.image = image;
+  frame->timeStamp = stamp;
+  frame->sensorId = cameraIndex;
 
   if (blocking_) {
     cameraMeasurementsReceived_[cameraIndex]->PushBlockingIfFull(frame, 1);
@@ -784,6 +815,7 @@ void ThreadedKFVio::optimizationLoop() {
           result.T_WS = lastOptimized_T_WS_;
           result.speedAndBiases = lastOptimizedSpeedAndBiases_;
           result.stamp = lastOptimizedStateTimestamp_;
+          result.id = lastAddedFrameId_;
           result.onlyPublishLandmarks = false;
         }
         else
@@ -861,9 +893,12 @@ void ThreadedKFVio::publisherLoop() {
     if (optimizationResults_.PopBlocking(&result) == false)
       return;
 
+    VLOG(1) << "Publishing results.";
     // call all user callbacks
     if (stateCallback_ && !result.onlyPublishLandmarks)
       stateCallback_(result.stamp, result.T_WS);
+    if (odometryCallback_ && !result.onlyPublishLandmarks)
+      odometryCallback_(result.stamp, result.id, result.T_WS);
     if (fullStateCallback_ && !result.onlyPublishLandmarks)
       fullStateCallback_(result.stamp, result.T_WS, result.speedAndBiases,
                          result.omega_S);
