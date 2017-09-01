@@ -227,37 +227,6 @@ bool ThreadedKFVio::addImage(const okvis::Time & stamp, size_t cameraIndex,
   }
 }
 
-bool ThreadedKFVio::addImageWithIndex(
-          const okvis::Time & stamp, size_t cameraIndex,
-          const cv::Mat & image, const int64_t & id) {
-  assert(cameraIndex<numCameras_);
-
-  if (lastAddedImageTimestamp_ > stamp
-      && fabs((lastAddedImageTimestamp_ - stamp).toSec())
-          > parameters_.sensors_information.frameTimestampTolerance) {
-    LOG(ERROR)
-        << "Received image from the past. Dropping the image.";
-    return false;
-  }
-  lastAddedImageTimestamp_ = stamp;
-  lastAddedFrameId_ = id;
-
-  std::shared_ptr<okvis::CameraMeasurement> frame = std::make_shared<
-      okvis::CameraMeasurement>();
-  frame->measurement.image = image;
-  frame->timeStamp = stamp;
-  frame->sensorId = cameraIndex;
-
-  if (blocking_) {
-    cameraMeasurementsReceived_[cameraIndex]->PushBlockingIfFull(frame, 1);
-    return true;
-  } else {
-    cameraMeasurementsReceived_[cameraIndex]->PushNonBlockingDroppingIfFull(
-        frame, max_camera_input_queue_size);
-    return cameraMeasurementsReceived_[cameraIndex]->Size() == 1;
-  }
-}
-
 // Add an abstracted image observation.
 bool ThreadedKFVio::addKeypoints(
     const okvis::Time & /*stamp*/, size_t /*cameraIndex*/,
@@ -815,7 +784,6 @@ void ThreadedKFVio::optimizationLoop() {
           result.T_WS = lastOptimized_T_WS_;
           result.speedAndBiases = lastOptimizedSpeedAndBiases_;
           result.stamp = lastOptimizedStateTimestamp_;
-          result.id = lastAddedFrameId_;
           result.onlyPublishLandmarks = false;
         }
         else
@@ -897,8 +865,6 @@ void ThreadedKFVio::publisherLoop() {
     // call all user callbacks
     if (stateCallback_ && !result.onlyPublishLandmarks)
       stateCallback_(result.stamp, result.T_WS);
-    if (odometryCallback_ && !result.onlyPublishLandmarks)
-      odometryCallback_(result.stamp, result.id, result.T_WS);
     if (fullStateCallback_ && !result.onlyPublishLandmarks)
       fullStateCallback_(result.stamp, result.T_WS, result.speedAndBiases,
                          result.omega_S);

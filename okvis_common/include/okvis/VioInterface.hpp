@@ -74,9 +74,6 @@ class VioInterface {
            const Eigen::Matrix<double, 9, 1> &,
            const Eigen::Matrix<double, 3, 1> &)> FullStateCallback;
   typedef std::function<
-      void(const okvis::Time &, const int64_t &,
-           const okvis::kinematics::Transformation &)> OdometryCallback;
-  typedef std::function<
       void(
           const okvis::Time &,
           const okvis::kinematics::Transformation &,
@@ -262,9 +259,6 @@ class VioInterface {
   ///        transforms points from the vehicle frame to the world frame
   virtual void setStateCallback(const StateCallback & stateCallback);
 
-  virtual void setOdometryCallback(
-      const OdometryCallback & odometryCallback);
-
   /// \brief Set the fullStateCallback to be called every time a new state is estimated.
   ///        When an implementing class has an estimate, they can call:
   ///        _fullStateCallback( stamp, T_w_vk, speedAndBiases, omega_S);
@@ -315,7 +309,6 @@ class VioInterface {
   bool writeTracksCsvDescription(size_t cameraId);
 
   StateCallback stateCallback_; ///< State callback function.
-  OdometryCallback odometryCallback_;
   FullStateCallback fullStateCallback_; ///< Full state callback function.
   FullStateCallbackWithExtrinsics fullStateCallbackWithExtrinsics_; ///< Full state and extrinsics callback function.
   LandmarksCallback landmarksCallback_; ///< Landmarks callback function.

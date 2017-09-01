@@ -132,9 +132,6 @@ class ThreadedKFVio : public VioInterface {
                         const std::vector<cv::KeyPoint> * keypoints = 0,
                         bool* asKeyframe = 0);
 
-  virtual bool addImageWithIndex(const okvis::Time & stamp, size_t cameraIndex,
-                                 const cv::Mat & image, const int64_t & id = 0);
-                        
   /**
    * \brief             Add an abstracted image observation.
    * \warning Not implemented.
@@ -342,7 +339,6 @@ class ThreadedKFVio : public VioInterface {
 
   okvis::Time lastAddedStateTimestamp_; ///< Timestamp of the newest state in the Estimator.
   okvis::Time lastAddedImageTimestamp_; ///< Timestamp of the newest image added to the image input queue.
-  int64_t lastAddedFrameId_;
 
 
   /// @name Measurement input queues

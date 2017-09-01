@@ -81,10 +81,6 @@ void VioInterface::setStateCallback(const StateCallback & stateCallback) {
   stateCallback_ = stateCallback;
 }
 
-void VioInterface::setOdometryCallback(const OdometryCallback & odometryCallback) {
-  odometryCallback_ = odometryCallback;
-}
-
 // Set the fullStateCallback to be called every time a new state is estimated.
 void VioInterface::setFullStateCallback(
     const FullStateCallback & fullStateCallback) {
